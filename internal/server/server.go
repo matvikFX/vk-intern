@@ -5,38 +5,36 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"vk-intern/internal/config"
 )
-
-type Storage interface {
-	GetUser(ctx context.Context, username string, passHash []byte) (string, error)
-
-	Write(ctx context.Context, data map[string]any) error
-	Read(ctx context.Context, keys []string) (map[string]any, error)
-}
 
 type Server struct {
 	cfg *config.Config
 	log *slog.Logger
 
+	auth    Auth
 	storage Storage
 }
 
-func New(cfg *config.Config, log *slog.Logger, storage Storage) *Server {
+func New(cfg *config.Config, log *slog.Logger, auth Auth, storage Storage) *Server {
 	return &Server{
 		cfg: cfg,
 		log: log,
 
+		auth:    auth,
 		storage: storage,
 	}
 }
 
 func (s *Server) Run() error {
 	const op = "server.Run"
-	log := s.log.With("op", op)
+	log := s.log.With(slog.String("op", op))
 
-	// addr := s.cfg.Server.Host + ":" + s.cfg.Server.Port
 	addr := fmt.Sprintf("%s:%d", s.cfg.Server.Host, s.cfg.Server.Port)
 	router := s.newRouter()
 	server := &http.Server{
@@ -44,20 +42,22 @@ func (s *Server) Run() error {
 		Handler: router,
 	}
 
-	log.Info("Starting server")
-	if err := server.ListenAndServe(); err != nil {
-		log.Error("Error occured while server was running")
-		panic(err)
-	}
-	log.Info("Server is running")
+	log.Info("Запуск сервера")
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			log.Error("Произошла ошибка во время работы сервера")
+			panic(err)
+		}
+	}()
+	log.Info(fmt.Sprintf("Сервер слушает порт %d", s.cfg.Server.Port))
 
-	// quit := make(chan os.Signal, 1)
-	// signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	// <-quit
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+	log.Info("Завершение работы сервера")
 
-	// make const\env var
-	ctx, shutdown := context.WithTimeout(context.Background(), s.cfg.Server.Timeout)
-	defer shutdown()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	return server.Shutdown(ctx)
 }

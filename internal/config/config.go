@@ -9,7 +9,9 @@ import (
 )
 
 type Config struct {
-	Env       string          `yaml:"env" env-default:"local"`
+	Env    string `yaml:"env" env-default:"local"`
+	Secret string `yaml:"secret" env-required:"true"`
+
 	Server    ServerConfig    `yaml:"server"`
 	Tarantool TarantoolConfig `yaml:"tarantool"`
 }
@@ -21,6 +23,9 @@ type ServerConfig struct {
 }
 
 type TarantoolConfig struct {
+	Host    string        `yaml:"host" env-default:"localhost"`
+	Port    int           `yaml:"port" env-required:"true"`
+	Timeout time.Duration `yaml:"timeout" env-default:"10s"`
 }
 
 func MustLoad() *Config {
