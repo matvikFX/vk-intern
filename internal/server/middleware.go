@@ -34,7 +34,7 @@ func (s *Server) withAuth(f handlerFunc) handlerFunc {
 		log.Info("Токен проверен", slog.String("username", username))
 
 		if err := s.auth.FindUser(r.Context(), username); err != nil {
-			log.Error("Пользователь не найден")
+			log.Error("Пользователь не найден", slog.String("error", err.Error()))
 			return writeJSON(w, http.StatusUnauthorized, ErrUnauth)
 		}
 
