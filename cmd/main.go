@@ -3,33 +3,46 @@ package main
 import (
 	"log/slog"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"vk-intern/internal/config"
+	"vk-intern/internal/kvstore/tarantool"
 	"vk-intern/internal/server"
-	"vk-intern/internal/tarantool"
+	"vk-intern/internal/services/auth"
+	"vk-intern/internal/services/storage"
 )
 
 const (
 	envLocal = "local"
+	envDev   = "dev"
+	envProd  = "prod"
 )
 
 func main() {
 	cfg := config.MustLoad()
 	log := newLogger(cfg.Env)
 
-	log.Info("Setting Tarantool")
-	tarantool := tarantool.New()
+	// kvStore
+	log.Info("Подключение Tarantool")
+	tarantool, err := tarantool.New(&cfg.Tarantool, log)
+	if err != nil {
+		log.Error("Ошибка подключения Tarantool", slog.String("error", err.Error()))
+		panic(err)
+	}
+	defer tarantool.Stop()
 
-	log.Info("Setting server")
-	server := server.New(cfg, log, tarantool)
+	// services
+	auth := auth.New(log, tarantool)
+	storage := storage.New(log, tarantool)
 
-	go server.Run()
+	// server
+	server := server.New(cfg, log, auth, storage)
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-	<-quit
+	log.Info("Запуск сервера")
+	if err := server.Run(); err != nil {
+		log.Error("Ошибка при работе сервера", slog.String("error", err.Error()))
+		panic(err)
+	}
+	log.Info("Сервер завершил работу")
 }
 
 func newLogger(env string) *slog.Logger {
