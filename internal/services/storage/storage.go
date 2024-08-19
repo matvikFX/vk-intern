@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"vk-intern/internal/models"
+	"vk-intern/internal/services"
 )
 
 type KVStore interface {
@@ -26,7 +27,9 @@ func New(log *slog.Logger, kvStore KVStore) *Storage {
 	}
 }
 
-func (s *Storage) Write(ctx context.Context, timeout time.Duration, data models.Data) error {
+func (s *Storage) Write(ctx context.Context,
+	timeout time.Duration, data models.Data,
+) error {
 	const op = "service.Write"
 	log := s.log.With(slog.String("op", op))
 
@@ -35,15 +38,18 @@ func (s *Storage) Write(ctx context.Context, timeout time.Duration, data models.
 
 	log.Info("Запись в базу данных")
 	if err := s.kvStore.Write(ctx, data); err != nil {
-		log.Error("Ошибка при записи в базу данных", slog.String("error", err.Error()))
-		return fmt.Errorf("%s: %w", op, err)
+		log.Error("Ошибка при записи в базу данных",
+			slog.String("error", err.Error()))
+		return fmt.Errorf("%s: %w", op, services.ErrInternal)
 	}
 	log.Info("Запись прошла успешно")
 
 	return nil
 }
 
-func (s *Storage) Read(ctx context.Context, timeout time.Duration, keys []string) (models.Data, error) {
+func (s *Storage) Read(ctx context.Context,
+	timeout time.Duration, keys []string,
+) (models.Data, error) {
 	const op = "service.Read"
 	log := s.log.With(slog.String("op", op))
 
@@ -53,8 +59,9 @@ func (s *Storage) Read(ctx context.Context, timeout time.Duration, keys []string
 	log.Info("Чтение базы данных")
 	data, err := s.kvStore.Read(ctx, keys)
 	if err != nil {
-		log.Error("Ошибка при чтении из базы данных", slog.String("error", err.Error()))
-		return nil, fmt.Errorf("%s: %w", op, err)
+		log.Error("Ошибка при чтении из базы данных",
+			slog.String("error", err.Error()))
+		return nil, fmt.Errorf("%s: %w", op, services.ErrInternal)
 	}
 	log.Info("Чтение прошло успешно")
 

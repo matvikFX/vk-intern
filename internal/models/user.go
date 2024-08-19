@@ -10,6 +10,6 @@ type LoginResponse struct {
 }
 
 type User struct {
-	Username string
-	Password string
+	Username string `msgpack:"username"`
+	Password string `msgpack:"password"`
 }

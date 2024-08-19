@@ -2,10 +2,12 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
 	"vk-intern/internal/models"
+	"vk-intern/internal/services"
 )
 
 func (s *Server) newRouter() *http.ServeMux {
@@ -27,13 +29,20 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if err := json.NewDecoder(r.Body).Decode(loginReq); err != nil {
 		log.Error("Не удалось преобразовать запроса в объект",
 			slog.String("error", err.Error()))
-		return writeErr(r, http.StatusBadRequest, ErrBadReq)
+		return writeErr(r, http.StatusBadRequest, ErrNoLogPass)
 	}
 	defer r.Body.Close()
 
-	token, err := s.auth.Login(r.Context(), s.cfg.Secret, loginReq.Username, loginReq.Password)
+	if loginReq.Username == "" || loginReq.Password == "" {
+		log.Error("Нет данных для входа")
+		return writeErr(r, http.StatusBadRequest, ErrNoLogPass)
+	}
+
+	token, err := s.auth.Login(r.Context(), s.cfg.Secret,
+		loginReq.Username, loginReq.Password,
+	)
 	if err != nil {
-		log.Error("Ошибка создания токена пользователя",
+		log.Error("Ошибка авторизации пользователя",
 			slog.String("error", err.Error()))
 		return writeErr(r, http.StatusUnauthorized, ErrInvalidCred)
 	}
@@ -49,13 +58,26 @@ func (s *Server) write(w http.ResponseWriter, r *http.Request) error {
 	writeReq := &models.WriteRequest{}
 	log.Info("Преобразование запроса в объект")
 	if err := json.NewDecoder(r.Body).Decode(writeReq); err != nil {
-		log.Error("Не удалось преобразовать запрос в объект")
-		return writeErr(r, http.StatusInternalServerError, err)
+		log.Error("Не удалось преобразовать запрос в объект",
+			slog.String("error", err.Error()))
+		return writeErr(r, http.StatusBadRequest, ErrBadReq)
 	}
 	defer r.Body.Close()
 
-	if err := s.storage.Write(r.Context(), s.cfg.Server.Timeout, writeReq.Data); err != nil {
-		log.Error("")
+	if len(writeReq.Data) == 0 {
+		log.Error("Нет данных для записи")
+		return writeErr(r, http.StatusBadRequest, ErrBadReq)
+	}
+
+	if err := s.storage.Write(r.Context(),
+		s.cfg.Server.Timeout, writeReq.Data,
+	); err != nil {
+		if errors.Is(err, services.ErrInternal) {
+			return writeErr(r, http.StatusBadRequest, err)
+		}
+
+		log.Error("Не удалось записать данные",
+			slog.String("error", err.Error()))
 		return writeErr(r, http.StatusInternalServerError, err)
 	}
 
@@ -70,17 +92,28 @@ func (s *Server) read(w http.ResponseWriter, r *http.Request) error {
 	readReq := &models.ReadRequest{}
 	log.Info("Преобразование запроса в объект")
 	if err := json.NewDecoder(r.Body).Decode(readReq); err != nil {
-		log.Error("Не удалось преобразовать запрос в объект")
-		return writeErr(r, http.StatusInternalServerError, err)
+		log.Error("Не удалось преобразовать запрос в объект",
+			slog.String("error", err.Error()))
+		return writeErr(r, http.StatusBadRequest, ErrBadReq)
 	}
 	defer r.Body.Close()
 
+	if len(readReq.Keys) == 0 {
+		log.Error("Нет данных для чтения")
+		return writeErr(r, http.StatusBadRequest, ErrBadReq)
+	}
+
 	data, err := s.storage.Read(r.Context(), s.cfg.Server.Timeout, readReq.Keys)
 	if err != nil {
-		log.Error("Не удалось преобразовать запрос в объект")
+		if errors.Is(err, services.ErrInternal) {
+			return writeErr(r, http.StatusBadRequest, err)
+		}
+
+		log.Error("Не удалось прочитать данные",
+			slog.String("error", err.Error()))
 		return writeErr(r, http.StatusInternalServerError, err)
 	}
 
 	readResp := &models.ReadResponse{Data: data}
-	return writeJSON(w, http.StatusCreated, readResp)
+	return writeJSON(w, http.StatusOK, readResp)
 }

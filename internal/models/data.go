@@ -19,3 +19,9 @@ type WriteRequest struct {
 type WriteResponse struct {
 	Status string `json:"status"`
 }
+
+// tarantool obj
+type Pair struct {
+	Key   string `msgpack:"key"`
+	Value any    `msgpack:"value"`
+}

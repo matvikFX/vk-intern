@@ -16,7 +16,8 @@ import (
 )
 
 var (
-	ErrBadReq      = errors.New("Поля логина или пароля не должны быть пустые")
+	ErrNoLogPass   = errors.New("Поля логина или пароля не должны быть пустые")
+	ErrBadReq      = errors.New("Некорректные данные запроса")
 	ErrUnauth      = errors.New("Пользователь не авторизован")
 	ErrInvalidCred = errors.New("Неправильный логин или пароль")
 )

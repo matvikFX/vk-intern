@@ -9,13 +9,12 @@ import (
 	"vk-intern/internal/jwt"
 	"vk-intern/internal/kvstore"
 	"vk-intern/internal/models"
+	"vk-intern/internal/services"
 )
 
 type KVStore interface {
 	GetUser(ctx context.Context, username string) (*models.User, error)
 }
-
-var ErrInvalidCred = errors.New("Неправильный логин или пароль")
 
 type Auth struct {
 	log     *slog.Logger
@@ -40,27 +39,20 @@ func (a *Auth) FindUser(ctx context.Context, username string) error {
 			return fmt.Errorf("%s: %w", op, kvstore.ErrUserNotFound)
 		}
 
-		log.Error("Ошибка при проверки пользователя", slog.String("error", err.Error()))
-		return fmt.Errorf("%s: %w", op, err)
+		log.Error("Ошибка при проверки пользователя",
+			slog.String("error", err.Error()))
+		return fmt.Errorf("%s: %w", op, services.ErrInternal)
 	}
 
 	log.Info("Пользователь найден")
 	return nil
 }
 
-func (a *Auth) Login(ctx context.Context, secret, username, password string) (string, error) {
+func (a *Auth) Login(ctx context.Context, secret string,
+	username, password string,
+) (string, error) {
 	const op = "service.Login"
 	log := a.log.With(slog.String("op", op))
-
-	if username == "" {
-		log.Error("Имя является пустой строкой")
-		return "", fmt.Errorf("%s: %w", op, ErrInvalidCred)
-	}
-
-	if password == "" {
-		log.Error("Пароль является пустой строкой")
-		return "", fmt.Errorf("%s: %w", op, ErrInvalidCred)
-	}
 
 	log.Info("Проверка пользователя")
 	user, err := a.kvStore.GetUser(ctx, username)
@@ -70,20 +62,22 @@ func (a *Auth) Login(ctx context.Context, secret, username, password string) (st
 			return "", fmt.Errorf("%s: %w", op, kvstore.ErrUserNotFound)
 		}
 
-		log.Error("Ошибка при получении пользователя", slog.String("error", err.Error()))
-		return "", fmt.Errorf("%s: %w", op, err)
+		log.Error("Ошибка при получении пользователя",
+			slog.String("error", err.Error()))
+		return "", fmt.Errorf("%s: %w", op, services.ErrInternal)
 	}
 
 	if user.Password != password {
-		log.Error("Неправильный пароль", slog.String("password", user.Password))
-		return "", fmt.Errorf("%s: %w", op, ErrInvalidCred)
+		log.Error("Неправильный пароль")
+		return "", fmt.Errorf("%s: %s", op, "Неправильный логин или пароль")
 	}
 
 	log.Info("Создание токена")
 	token, err := jwt.NewToken(username, secret)
 	if err != nil {
-		log.Error("Не удалось создать токен")
-		return "", fmt.Errorf("%s: %w", op, err)
+		log.Error("Не удалось создать токен",
+			slog.String("error", err.Error()))
+		return "", fmt.Errorf("%s: %w", op, services.ErrInternal)
 	}
 	log.Info("Токен успешно создан")
 
