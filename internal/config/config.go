@@ -23,8 +23,12 @@ type ServerConfig struct {
 }
 
 type TarantoolConfig struct {
-	Host    string        `yaml:"host" env-default:"localhost"`
-	Port    int           `yaml:"port" env-required:"true"`
+	Host string `yaml:"host" env-default:"localhost"`
+	Port int    `yaml:"port" env-required:"true"`
+
+	User string `yaml:"user" env-required:"true"`
+	Pass string `yaml:"pass" env-required:"true"`
+
 	Timeout time.Duration `yaml:"timeout" env-default:"10s"`
 }
 

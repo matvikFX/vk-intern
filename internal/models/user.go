@@ -11,5 +11,5 @@ type LoginResponse struct {
 
 type User struct {
 	Username string
-	PassHash []byte
+	Password string
 }

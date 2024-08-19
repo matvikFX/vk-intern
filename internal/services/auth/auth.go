@@ -9,8 +9,6 @@ import (
 	"vk-intern/internal/jwt"
 	"vk-intern/internal/kvstore"
 	"vk-intern/internal/models"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 type KVStore interface {
@@ -38,7 +36,7 @@ func (a *Auth) FindUser(ctx context.Context, username string) error {
 	log.Info("Проверка на существование пользователя")
 	if _, err := a.kvStore.GetUser(ctx, username); err != nil {
 		if errors.Is(err, kvstore.ErrUserNotFound) {
-			log.Error("Ошибка при проверки пользователя", slog.String("error", err.Error()))
+			log.Error("Пользователь не найден")
 			return fmt.Errorf("%s: %w", op, kvstore.ErrUserNotFound)
 		}
 
@@ -67,13 +65,18 @@ func (a *Auth) Login(ctx context.Context, secret, username, password string) (st
 	log.Info("Проверка пользователя")
 	user, err := a.kvStore.GetUser(ctx, username)
 	if err != nil {
-		log.Error("Пользователя с таким именем не существует")
+		if errors.Is(err, kvstore.ErrUserNotFound) {
+			log.Error("Пользователя с таким именем не существует")
+			return "", fmt.Errorf("%s: %w", op, kvstore.ErrUserNotFound)
+		}
+
+		log.Error("Ошибка при получении пользователя", slog.String("error", err.Error()))
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	if err := bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
-		log.Error("Введен неправильный пароль")
-		return "", fmt.Errorf("%s: %w", op, err)
+	if user.Password != password {
+		log.Error("Неправильный пароль", slog.String("password", user.Password))
+		return "", fmt.Errorf("%s: %w", op, ErrInvalidCred)
 	}
 
 	log.Info("Создание токена")

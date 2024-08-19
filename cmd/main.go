@@ -22,7 +22,6 @@ func main() {
 	log := newLogger(cfg.Env)
 
 	// kvStore
-	log.Info("Подключение Tarantool")
 	tarantool, err := tarantool.New(&cfg.Tarantool, log)
 	if err != nil {
 		log.Error("Ошибка подключения Tarantool", slog.String("error", err.Error()))
@@ -37,12 +36,10 @@ func main() {
 	// server
 	server := server.New(cfg, log, auth, storage)
 
-	log.Info("Запуск сервера")
 	if err := server.Run(); err != nil {
 		log.Error("Ошибка при работе сервера", slog.String("error", err.Error()))
 		panic(err)
 	}
-	log.Info("Сервер завершил работу")
 }
 
 func newLogger(env string) *slog.Logger {

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -11,7 +12,24 @@ import (
 	"time"
 
 	"vk-intern/internal/config"
+	"vk-intern/internal/models"
 )
+
+var (
+	ErrBadReq      = errors.New("Поля логина или пароля не должны быть пустые")
+	ErrUnauth      = errors.New("Пользователь не авторизован")
+	ErrInvalidCred = errors.New("Неправильный логин или пароль")
+)
+
+type Auth interface {
+	Login(ctx context.Context, secret, username, password string) (string, error)
+	FindUser(ctx context.Context, username string) error
+}
+
+type Storage interface {
+	Write(ctx context.Context, timeout time.Duration, data models.Data) error
+	Read(ctx context.Context, timeout time.Duration, keys []string) (models.Data, error)
+}
 
 type Server struct {
 	cfg *config.Config

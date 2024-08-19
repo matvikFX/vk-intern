@@ -14,9 +14,14 @@ type handlerFunc func(w http.ResponseWriter, r *http.Request) error
 func handleFunc(f handlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := f(w, r); err != nil {
-			writeJSON(w, http.StatusInternalServerError, errResp{Error: err.Error()})
+			writeJSON(w, r.Response.StatusCode, errResp{Error: err.Error()})
 		}
 	}
+}
+
+func writeErr(r *http.Request, statusCode int, err error) error {
+	r.Response = &http.Response{StatusCode: statusCode}
+	return err
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) error {

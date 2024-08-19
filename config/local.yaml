@@ -1,10 +1,16 @@
 env: local
 secret: vk-internal
+
 server:
   host: localhost
   port: 8080
   timeout: 10s
+
 tarantool:
   host: localhost
   port: 3301
-  timeout: 10s
+
+  user: storage
+  pass: admin
+
+  timeout: 5s
