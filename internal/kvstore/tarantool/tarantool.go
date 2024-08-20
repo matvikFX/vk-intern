@@ -47,7 +47,7 @@ func New(cfg *config.TarantoolConfig, logger *slog.Logger) (*Tarantool, error) {
 		Timeout: cfg.Timeout,
 	}
 
-	log.Info("Подключение к Tarantool")
+	log.Info("Подключение к Tarantool", slog.String("addr", addr))
 	conn, err := tarantool.Connect(ctx, dialer, opts)
 	if err != nil {
 		log.Error("Не удалось подключиться к Tarantool", slog.String("error", err.Error()))

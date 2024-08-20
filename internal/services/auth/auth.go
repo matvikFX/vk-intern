@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"vk-intern/internal/jwt"
 	"vk-intern/internal/kvstore"
@@ -49,7 +50,7 @@ func (a *Auth) FindUser(ctx context.Context, username string) error {
 }
 
 func (a *Auth) Login(ctx context.Context, secret string,
-	username, password string,
+	username, password string, duration time.Duration,
 ) (string, error) {
 	const op = "service.Login"
 	log := a.log.With(slog.String("op", op))
@@ -73,7 +74,7 @@ func (a *Auth) Login(ctx context.Context, secret string,
 	}
 
 	log.Info("Создание токена")
-	token, err := jwt.NewToken(username, secret)
+	token, err := jwt.NewToken(username, secret, duration)
 	if err != nil {
 		log.Error("Не удалось создать токен",
 			slog.String("error", err.Error()))

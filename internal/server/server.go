@@ -23,7 +23,7 @@ var (
 )
 
 type Auth interface {
-	Login(ctx context.Context, secret, username, password string) (string, error)
+	Login(ctx context.Context, secret, username, password string, duration time.Duration) (string, error)
 	FindUser(ctx context.Context, username string) error
 }
 

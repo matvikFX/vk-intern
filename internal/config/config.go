@@ -19,6 +19,7 @@ type Config struct {
 type ServerConfig struct {
 	Host    string        `yaml:"host" env-default:"localhost"`
 	Port    int           `yaml:"port" env-required:"true"`
+	Token   time.Duration `yaml:"token-duration" env-default:"1h"`
 	Timeout time.Duration `yaml:"timeout" env-default:"10s"`
 }
 

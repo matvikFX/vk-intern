@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  tarantool:
+    build:
+      context: .
+      dockerfile: tarantool.Dockerfile
+    container_name: tarantool
+    networks:
+      - app-net
+    ports:
+      - 3301:3301
+
+  go-app:
+    depends_on:
+      - tarantool
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: go-app
+    networks:
+      - app-net
+    ports:
+      - 8080:8080
+
+networks:
+  app-net:
+    driver: bridge

@@ -39,7 +39,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	token, err := s.auth.Login(r.Context(), s.cfg.Secret,
-		loginReq.Username, loginReq.Password,
+		loginReq.Username, loginReq.Password, s.cfg.Server.Token,
 	)
 	if err != nil {
 		log.Error("Ошибка авторизации пользователя",
