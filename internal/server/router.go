@@ -2,12 +2,10 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"net/http"
 
 	"vk-intern/internal/models"
-	"vk-intern/internal/services"
 )
 
 func (s *Server) newRouter() *http.ServeMux {
@@ -72,10 +70,6 @@ func (s *Server) write(w http.ResponseWriter, r *http.Request) error {
 	if err := s.storage.Write(r.Context(),
 		s.cfg.Server.Timeout, writeReq.Data,
 	); err != nil {
-		if errors.Is(err, services.ErrInternal) {
-			return writeErr(r, http.StatusBadRequest, err)
-		}
-
 		log.Error("Не удалось записать данные",
 			slog.String("error", err.Error()))
 		return writeErr(r, http.StatusInternalServerError, err)
@@ -105,10 +99,6 @@ func (s *Server) read(w http.ResponseWriter, r *http.Request) error {
 
 	data, err := s.storage.Read(r.Context(), s.cfg.Server.Timeout, readReq.Keys)
 	if err != nil {
-		if errors.Is(err, services.ErrInternal) {
-			return writeErr(r, http.StatusBadRequest, err)
-		}
-
 		log.Error("Не удалось прочитать данные",
 			slog.String("error", err.Error()))
 		return writeErr(r, http.StatusInternalServerError, err)

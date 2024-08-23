@@ -12,6 +12,7 @@ docker-compose up --build
 ### Локально
 ```bash
 docker-compose up tarantool
+# Обязательно прописать путь к конфигу, или добавить переменную окружения CONFIG_PATH
 go run cmd/main.go --config=config/local.yaml
 ```
 
